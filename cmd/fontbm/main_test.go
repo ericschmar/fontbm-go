@@ -60,6 +60,17 @@ func TestRunAcceptsRGBMode(t *testing.T) {
 	if !strings.Contains(string(descriptor), "alphaChnl=4 redChnl=0 greenChnl=0 blueChnl=0") {
 		t.Fatalf("unexpected RGB descriptor channels: %s", descriptor)
 	}
+	atlasData, err := os.ReadFile(output + "_0.png")
+	if err != nil {
+		t.Fatal(err)
+	}
+	atlas, err := png.Decode(bytes.NewReader(atlasData))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := atlas.(*image.RGBA); !ok {
+		t.Fatalf("got PNG color model %T; want RGB/RGBA", atlas)
+	}
 }
 
 func TestRunRequiresFontAndRejectsBothCharacterInputs(t *testing.T) {
