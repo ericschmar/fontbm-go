@@ -138,9 +138,7 @@ func Generate(opts Options) (*Result, error) {
 	var atlas image.Image
 	if opts.ColorMode == "grayscale" {
 		grayAtlas := image.NewGray(image.Rect(0, 0, width, height))
-		for i := range grayAtlas.Pix {
-			grayAtlas.Pix[i] = 255
-		}
+
 		atlas = grayAtlas
 	} else {
 		rgbAtlas := image.NewRGBA(image.Rect(0, 0, width, height))

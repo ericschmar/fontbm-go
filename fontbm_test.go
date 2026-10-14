@@ -3,6 +3,7 @@ package fontbm
 import (
 	"bytes"
 	"image"
+	"image/color"
 	"image/png"
 	"os"
 	"strings"
@@ -43,6 +44,22 @@ func TestGenerate(t *testing.T) {
 				t.Fatalf("pixel (%d,%d) is not opaque grayscale: %04x %04x %04x %04x", x, y, r, g, b, a)
 			}
 		}
+	}
+	if got := img.At(0, 0); got != (color.Gray{Y: 0}) {
+		t.Fatalf("atlas background pixel = %v; want black", got)
+	}
+	glyph := result.Glyphs[0]
+	brightest := uint32(0)
+	for y := glyph.Y; y < glyph.Y+glyph.Height; y++ {
+		for x := glyph.X; x < glyph.X+glyph.Width; x++ {
+			r, _, _, _ := img.At(x, y).RGBA()
+			if r > brightest {
+				brightest = r
+			}
+		}
+	}
+	if brightest == 0 {
+		t.Fatal("glyph has no white or antialiased pixels")
 	}
 	for _, glyph := range result.Glyphs {
 		if glyph.ID == ' ' && (glyph.Width != 0 || glyph.Height != 0 || glyph.XAdvance == 0) {
