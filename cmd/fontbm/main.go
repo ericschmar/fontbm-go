@@ -16,14 +16,15 @@ func main() {
 	charsFile := flag.String("chars-file", "", "UTF-8 file containing characters to include")
 	pixelSize := flag.Float64("size", 32, "font size in pixels")
 	maxSize := flag.Int("max-size", 4096, "maximum atlas width and height")
+	colorMode := flag.String("color", "grayscale", "atlas color mode: grayscale or rgb")
 	flag.Parse()
-	if err := run(*fontPath, *output, *chars, *charsFile, *pixelSize, *maxSize); err != nil {
+	if err := run(*fontPath, *output, *chars, *charsFile, *pixelSize, *maxSize, *colorMode); err != nil {
 		fmt.Fprintln(os.Stderr, "fontbm:", err)
 		os.Exit(1)
 	}
 }
 
-func run(fontPath, output, chars, charsFile string, pixelSize float64, maxSize int) error {
+func run(fontPath, output, chars, charsFile string, pixelSize float64, maxSize int, colorMode string) error {
 	if fontPath == "" {
 		return fmt.Errorf("-font is required")
 	}
@@ -45,7 +46,7 @@ func run(fontPath, output, chars, charsFile string, pixelSize float64, maxSize i
 		}
 	}
 	pageName := filepath.Base(output) + "_0.png"
-	result, err := fontbm.Generate(fontbm.Options{FontData: fontData, FontName: filepath.Base(output), PageName: pageName, Chars: chars, PixelSize: pixelSize, MaxAtlasSize: maxSize})
+	result, err := fontbm.Generate(fontbm.Options{FontData: fontData, FontName: filepath.Base(output), PageName: pageName, Chars: chars, PixelSize: pixelSize, MaxAtlasSize: maxSize, ColorMode: colorMode})
 	if err != nil {
 		return err
 	}

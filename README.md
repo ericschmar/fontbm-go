@@ -1,6 +1,6 @@
 # fontbm-go
 
-A Go library and CLI for generating Garmin-compatible bitmap fonts from TrueType fonts. It writes a BMFont text descriptor (`.txt`) and a single-page PNG atlas with glyph coverage encoded in opaque grayscale RGB.
+A Go library and CLI for generating Garmin-compatible bitmap fonts from TrueType fonts. It writes a BMFont text descriptor (`.txt`) and a single-page PNG atlas. Atlas output defaults to grayscale and can optionally use RGB.
 
 ## CLI
 
@@ -10,7 +10,7 @@ go run ./cmd/fontbm -font ./MyFont.ttf -size 32 -output ./dist/myfont -chars '01
 
 This creates `./dist/myfont.txt` and `./dist/myfont_0.png`. If `-chars` and `-chars-file` are omitted, printable ASCII is included.
 
-Use `-chars-file` for a UTF-8 character set file. The two character options cannot be combined. `-max-size` sets the maximum power-of-two atlas dimensions (default `4096`).
+Use `-chars-file` for a UTF-8 character set file. The two character options cannot be combined. `-max-size` sets the maximum power-of-two atlas dimensions (default `4096`). `-color grayscale` selects the Garmin-friendly grayscale PNG (the default); `-color rgb` selects opaque RGB output.
 
 ## Go library
 
@@ -25,6 +25,7 @@ result, err := fontbm.Generate(fontbm.Options{
     PageName: "myfont_0.png",
     Chars: "0123456789:.-",
     PixelSize: 32,
+    ColorMode: "grayscale", // or "rgb"
 })
 if err != nil {
     log.Fatal(err)
@@ -37,7 +38,7 @@ if err := os.WriteFile("myfont_0.png", result.PNG, 0644); err != nil {
 }
 ```
 
-Import path: `github.com/ericschmar/fontbm-go`. `MaxAtlasSize` defaults to 4096, and omitted `Chars` selects printable ASCII. `ReadChars` validates UTF-8 for character files.
+Import path: `github.com/ericschmar/fontbm-go`. `MaxAtlasSize` defaults to 4096, omitted `Chars` selects printable ASCII, and omitted `ColorMode` selects grayscale. Set `ColorMode` to `"rgb"` for RGB output. `ReadChars` validates UTF-8 for character files.
 
 ## Garmin use
 

@@ -1,6 +1,9 @@
 package main
 
 import (
+	"bytes"
+	"image"
+	"image/png"
 	"os"
 	"path/filepath"
 	"strings"
@@ -11,7 +14,7 @@ func TestRunWritesFiles(t *testing.T) {
 	dir := t.TempDir()
 	fontPath := filepath.Join("..", "..", "testdata", "Go-Regular.ttf")
 	output := filepath.Join(dir, "sample")
-	if err := run(fontPath, output, "A ", "", 16, 256); err != nil {
+	if err := run(fontPath, output, "A ", "", 16, 256, "grayscale"); err != nil {
 		t.Fatal(err)
 	}
 	descriptor, err := os.ReadFile(output + ".txt")
@@ -31,7 +34,7 @@ func TestRunDefaultsToPrintableASCII(t *testing.T) {
 	dir := t.TempDir()
 	fontPath := filepath.Join("..", "..", "testdata", "Go-Regular.ttf")
 	output := filepath.Join(dir, "default")
-	if err := run(fontPath, output, "", "", 12, 1024); err != nil {
+	if err := run(fontPath, output, "", "", 12, 1024, "grayscale"); err != nil {
 		t.Fatal(err)
 	}
 	descriptor, err := os.ReadFile(output + ".txt")
@@ -43,11 +46,27 @@ func TestRunDefaultsToPrintableASCII(t *testing.T) {
 	}
 }
 
+func TestRunAcceptsRGBMode(t *testing.T) {
+	dir := t.TempDir()
+	fontPath := filepath.Join("..", "..", "testdata", "Go-Regular.ttf")
+	output := filepath.Join(dir, "rgb")
+	if err := run(fontPath, output, "A", "", 16, 256, "rgb"); err != nil {
+		t.Fatal(err)
+	}
+	descriptor, err := os.ReadFile(output + ".txt")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(descriptor), "alphaChnl=4 redChnl=0 greenChnl=0 blueChnl=0") {
+		t.Fatalf("unexpected RGB descriptor channels: %s", descriptor)
+	}
+}
+
 func TestRunRequiresFontAndRejectsBothCharacterInputs(t *testing.T) {
-	if err := run("", "out", "", "", 16, 256); err == nil {
+	if err := run("", "out", "", "", 16, 256, "grayscale"); err == nil {
 		t.Fatal("expected missing font error")
 	}
-	if err := run("font.ttf", "out", "A", "chars.txt", 16, 256); err == nil || !strings.Contains(err.Error(), "cannot be used together") {
+	if err := run("font.ttf", "out", "A", "chars.txt", 16, 256, "grayscale"); err == nil || !strings.Contains(err.Error(), "cannot be used together") {
 		t.Fatalf("got error %v; want mutually-exclusive character input error", err)
 	}
 }

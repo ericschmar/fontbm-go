@@ -2,6 +2,7 @@ package fontbm
 
 import (
 	"bytes"
+	"image"
 	"image/png"
 	"os"
 	"strings"
@@ -25,7 +26,7 @@ func TestGenerate(t *testing.T) {
 	if len(result.Glyphs) != 4 {
 		t.Fatalf("got %d glyphs; want 4", len(result.Glyphs))
 	}
-	if !strings.Contains(result.Descriptor, "chars count=4") || !strings.Contains(result.Descriptor, `page id=0 file="fixture_0.png"`) || !strings.Contains(result.Descriptor, "chnl=7") || !strings.Contains(result.Descriptor, "alphaChnl=4 redChnl=0 greenChnl=0 blueChnl=0") {
+	if !strings.Contains(result.Descriptor, "chars count=4") || !strings.Contains(result.Descriptor, `page id=0 file="fixture_0.png"`) || !strings.Contains(result.Descriptor, "chnl=7") || !strings.Contains(result.Descriptor, "alphaChnl=3 redChnl=0 greenChnl=0 blueChnl=0") {
 		t.Fatalf("unexpected descriptor:\n%s", result.Descriptor)
 	}
 	img, err := png.Decode(bytes.NewReader(result.PNG))
@@ -47,6 +48,40 @@ func TestGenerate(t *testing.T) {
 		if glyph.ID == ' ' && (glyph.Width != 0 || glyph.Height != 0 || glyph.XAdvance == 0) {
 			t.Fatalf("unexpected space metrics: %+v", glyph)
 		}
+	}
+}
+
+func TestGenerateRGB(t *testing.T) {
+	result, err := Generate(Options{FontData: testFont(t), Chars: "Ag", PixelSize: 24, ColorMode: "rgb"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(result.Descriptor, "alphaChnl=4 redChnl=0 greenChnl=0 blueChnl=0") {
+		t.Fatalf("unexpected RGB descriptor channels:\n%s", result.Descriptor)
+	}
+	img, err := png.Decode(bytes.NewReader(result.PNG))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := img.(*image.NRGBA); !ok {
+		if _, ok := img.(*image.RGBA); !ok {
+			t.Fatalf("got PNG type %T; want RGB/RGBA", img)
+		}
+	}
+	for y := 0; y < result.Height; y++ {
+		for x := 0; x < result.Width; x++ {
+			_, _, _, a := img.At(x, y).RGBA()
+			if a != 0xffff {
+				t.Fatalf("pixel (%d,%d) has non-opaque alpha", x, y)
+			}
+		}
+	}
+}
+
+func TestGenerateRejectsInvalidColorMode(t *testing.T) {
+	_, err := Generate(Options{FontData: testFont(t), Chars: "A", PixelSize: 12, ColorMode: "cmyk"})
+	if err == nil || !strings.Contains(err.Error(), "color mode") {
+		t.Fatalf("got error %v; want invalid color mode error", err)
 	}
 }
 

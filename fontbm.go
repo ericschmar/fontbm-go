@@ -26,6 +26,7 @@ type Options struct {
 	Chars        string
 	PixelSize    float64
 	MaxAtlasSize int
+	ColorMode    string
 }
 
 type Glyph struct {
@@ -65,6 +66,12 @@ func Generate(opts Options) (*Result, error) {
 	}
 	if opts.MaxAtlasSize < 1 {
 		return nil, fmt.Errorf("maximum atlas size must be positive")
+	}
+	if opts.ColorMode == "" {
+		opts.ColorMode = "grayscale"
+	}
+	if opts.ColorMode != "grayscale" && opts.ColorMode != "rgb" {
+		return nil, fmt.Errorf("color mode must be grayscale or rgb")
 	}
 	if opts.Chars == "" {
 		opts.Chars = DefaultChars
@@ -128,11 +135,21 @@ func Generate(opts Options) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
-	atlas := image.NewRGBA(image.Rect(0, 0, width, height))
-	for y := 0; y < height; y++ {
-		for x := 0; x < width; x++ {
-			atlas.SetRGBA(x, y, color.RGBA{A: 255})
+	var atlas image.Image
+	if opts.ColorMode == "grayscale" {
+		grayAtlas := image.NewGray(image.Rect(0, 0, width, height))
+		for i := range grayAtlas.Pix {
+			grayAtlas.Pix[i] = 255
 		}
+		atlas = grayAtlas
+	} else {
+		rgbAtlas := image.NewRGBA(image.Rect(0, 0, width, height))
+		for y := 0; y < height; y++ {
+			for x := 0; x < width; x++ {
+				rgbAtlas.SetRGBA(x, y, color.RGBA{A: 255})
+			}
+		}
+		atlas = rgbAtlas
 	}
 	resultGlyphs := make([]Glyph, len(glyphs))
 	for i, g := range glyphs {
@@ -143,7 +160,11 @@ func Generate(opts Options) (*Result, error) {
 		for y := 0; y < g.glyph.Height; y++ {
 			for x := 0; x < g.glyph.Width; x++ {
 				v := g.mask.AlphaAt(x, y).A
-				atlas.SetRGBA(g.glyph.X+x, g.glyph.Y+y, color.RGBA{R: v, G: v, B: v, A: 255})
+				if grayAtlas, ok := atlas.(*image.Gray); ok {
+					grayAtlas.SetGray(g.glyph.X+x, g.glyph.Y+y, color.Gray{Y: v})
+				} else {
+					atlas.(*image.RGBA).SetRGBA(g.glyph.X+x, g.glyph.Y+y, color.RGBA{R: v, G: v, B: v, A: 255})
+				}
 			}
 		}
 	}
@@ -153,7 +174,11 @@ func Generate(opts Options) (*Result, error) {
 	}
 	var descriptor strings.Builder
 	fmt.Fprintf(&descriptor, "info face=%q size=%d bold=0 italic=0 charset=\"\" unicode=1 stretchH=100 smooth=1 aa=1 padding=0,0,0,0 spacing=0,0 outline=0\n", opts.FontName, int(math.Round(opts.PixelSize)))
-	fmt.Fprintf(&descriptor, "common lineHeight=%d base=%d scaleW=%d scaleH=%d pages=1 packed=0 alphaChnl=4 redChnl=0 greenChnl=0 blueChnl=0\n", lineHeight, base, width, height)
+	if opts.ColorMode == "grayscale" {
+		fmt.Fprintf(&descriptor, "common lineHeight=%d base=%d scaleW=%d scaleH=%d pages=1 packed=0 alphaChnl=3 redChnl=0 greenChnl=0 blueChnl=0\n", lineHeight, base, width, height)
+	} else {
+		fmt.Fprintf(&descriptor, "common lineHeight=%d base=%d scaleW=%d scaleH=%d pages=1 packed=0 alphaChnl=4 redChnl=0 greenChnl=0 blueChnl=0\n", lineHeight, base, width, height)
+	}
 	fmt.Fprintf(&descriptor, "page id=0 file=%q\nchars count=%d\n", opts.PageName, len(resultGlyphs))
 	for _, g := range resultGlyphs {
 		yOffset := g.YOffset + base
